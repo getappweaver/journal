@@ -1,0 +1,13 @@
+{
+  "name": "dm-bot-journal-plugin",
+  "version": "0.2.0",
+  "dmBot": {
+    "coreApiVersion": "^9.12.0",
+    "description": "Captain's Log: private journaling and commit-aware notes for AppWeaver"
+  },
+  "description": "Captain's Log journaling plugin for AppWeaver",
+  "type": "module",
+  "scripts": {
+    "contrib:setup": "chmod +x ../../scripts/commit-msg ../../scripts/post-commit ../../scripts/ngit-helper.sh && git config core.hooksPath ../../scripts"
+  }
+}
