@@ -57,7 +57,7 @@ type LayoutProps = {
 type BoxProps = {
   children: WebNode[];
   className: string | null;
-  padding: 'xs' | 'sm' | 'md' | 'lg';
+  padding: 'xs' | 'sm' | 'md' | 'lg' | null;
 };
 
 type RenderJournalRootProps = {
@@ -127,7 +127,10 @@ function box({ children, className, padding }: BoxProps): WebNode {
   return {
     type: 'element',
     tag: 'box',
-    props: className ? { padding, className } : { padding },
+    props: {
+      ...(className ? { className } : {}),
+      ...(padding ? { padding } : {}),
+    },
     children,
   };
 }
@@ -265,6 +268,7 @@ function publishJournalEntryAction(
         ...entry.tags.map((tag) => ['t', tag]),
         ...(title ? [['subject', title]] : []),
       ],
+      signTitle: 'Sign Event: Publish journal entry',
       fallbackRelays: [
         'wss://relay.damus.io',
         'wss://nos.lol',
@@ -283,14 +287,21 @@ function publishJournalEntryAction(
   };
 }
 
+function copyToClipboardAction(text: string): WebAction {
+  return {
+    type: 'clientAction',
+    action: 'clipboard.writeText',
+    payload: { text },
+  };
+}
+
 function renderEntryActions(alias: string, entry: JournalEntry): WebNode {
   return {
     type: 'element',
     tag: 'overflowMenu',
     props: {
-      label: '⋮',
-      buttonVariant: 'icon',
-      className: 'journal-entry__menu',
+      label: formatEntryTime(entry.created_at),
+      className: 'journal-entry__time journal-entry__menu',
     },
     children: [
       {
@@ -305,17 +316,17 @@ function renderEntryActions(alias: string, entry: JournalEntry): WebNode {
         type: 'element',
         tag: 'menuItem',
         props: {
-          label: 'Delete',
-          tone: 'danger',
-          action: deleteJournalEntryAction(alias, entry),
+          label: `Copy #${entry.id}`,
+          action: copyToClipboardAction(`#${entry.id}`),
         },
       },
       {
         type: 'element',
         tag: 'menuItem',
         props: {
-          label: 'Publish',
-          action: publishJournalEntryAction(alias, entry),
+          label: 'Delete',
+          tone: 'danger',
+          action: deleteJournalEntryAction(alias, entry),
         },
       },
     ],
@@ -323,34 +334,25 @@ function renderEntryActions(alias: string, entry: JournalEntry): WebNode {
 }
 
 function renderEntry(alias: string, entry: JournalEntry): WebNode {
-  const heading = entry.title ?? formatEntryTime(entry.created_at);
   const tags = entry.tags.length > 0 ? ` #${entry.tags.join(' #')}` : '';
 
   const headerChildren: WebNode[] = [
-    textElement({
-      value: heading,
-      className: null,
-      tone: null,
-      size: null,
-      weight: 'semibold',
-    }),
+    ...(entry.title
+      ? [
+          textElement({
+            value: entry.title,
+            className: null,
+            tone: null,
+            size: null,
+            weight: null,
+          }),
+        ]
+      : []),
   ];
-
-  if (entry.title) {
-    headerChildren.push(
-      textElement({
-        value: formatEntryTime(entry.created_at),
-        className: 'journal-entry__time',
-        tone: 'muted',
-        size: 'sm',
-        weight: null,
-      }),
-    );
-  }
 
   return box({
     className: 'journal-entry',
-    padding: 'sm',
+    padding: null,
     children: [
       row({
         className: 'journal-entry__header',
@@ -371,12 +373,16 @@ function renderEntry(alias: string, entry: JournalEntry): WebNode {
         size: null,
         weight: null,
       }),
-      renderEntryMeta(entry, tags),
+      renderEntryMeta(alias, entry, tags),
     ],
   });
 }
 
-function renderEntryMeta(entry: JournalEntry, tags: string): WebNode {
+function renderEntryMeta(
+  alias: string,
+  entry: JournalEntry,
+  tags: string,
+): WebNode {
   const nostrUrl =
     typeof entry.metadata.nostrUrl === 'string'
       ? entry.metadata.nostrUrl
@@ -385,11 +391,11 @@ function renderEntryMeta(entry: JournalEntry, tags: string): WebNode {
   if (entry.status === 'published' && nostrUrl) {
     return row({
       className: 'journal-entry__meta',
-      gap: 'xs',
+      gap: 'sm',
       children: [
         textElement({
-          value: `#${entry.id} · `,
-          className: null,
+          value: tags.trim(),
+          className: 'journal-entry__tags',
           tone: 'muted',
           size: 'sm',
           weight: null,
@@ -402,27 +408,44 @@ function renderEntryMeta(entry: JournalEntry, tags: string): WebNode {
             external: true,
             tone: 'muted',
             size: 'sm',
-            className: 'journal-entry__published-link',
+            className: 'journal-entry__status journal-entry__published-link',
           },
           children: [{ type: 'text', value: 'published' }],
         },
-        textElement({
-          value: tags,
-          className: null,
-          tone: 'muted',
-          size: 'sm',
-          weight: null,
-        }),
       ],
     });
   }
 
-  return textElement({
-    value: `#${entry.id} · private${tags}`,
+  return row({
     className: 'journal-entry__meta',
-    tone: 'muted',
-    size: 'sm',
-    weight: null,
+    gap: 'sm',
+    children: [
+      textElement({
+        value: tags.trim(),
+        className: 'journal-entry__tags',
+        tone: 'muted',
+        size: 'sm',
+        weight: null,
+      }),
+      {
+        type: 'element',
+        tag: 'overflowMenu',
+        props: {
+          label: 'private',
+          className: 'journal-entry__status journal-entry__status-link',
+        },
+        children: [
+          {
+            type: 'element',
+            tag: 'menuItem',
+            props: {
+              label: 'Publish',
+              action: publishJournalEntryAction(alias, entry),
+            },
+          },
+        ],
+      },
+    ],
   });
 }
 
@@ -535,7 +558,7 @@ function renderDiaryPage(alias: string, page: DiaryPage): WebNode {
 
   return box({
     className: 'journal-page',
-    padding: 'lg',
+    padding: null,
     children: [
       row({
         className: 'journal-page__header',
@@ -546,7 +569,7 @@ function renderDiaryPage(alias: string, page: DiaryPage): WebNode {
             className: 'journal-page__date',
             tone: null,
             size: null,
-            weight: 'semibold',
+            weight: null,
           }),
           textElement({
             value: `Page ${page.pageNumber}`,
@@ -567,11 +590,11 @@ function renderDiaryPage(alias: string, page: DiaryPage): WebNode {
 function renderJournalSection(title: string, children: WebNode[]): WebNode {
   return stack({
     className: 'journal-section',
-    gap: 'md',
+    gap: 'sm',
     children: [
       textElement({
         value: title,
-        className: null,
+        className: 'journal-section__title',
         tone: null,
         size: null,
         weight: 'semibold',
@@ -629,10 +652,12 @@ export function renderJournalWebRoot({
         id: 'journal-phase1',
         cssText: `
 .journal-shell {
+  --journal-page-bg: color-mix(in srgb, var(--color-surface, Canvas) 96%, white 4%);
+  --journal-entry-even-bg: color-mix(in srgb, var(--color-surface-alt, #1a1a1a) 76%, #000 24%);
   min-height: 100%;
   max-height: 100%;
   overflow: auto;
-  padding: 4px;
+  padding: 0;
 }
 
 .journal-compose,
@@ -642,17 +667,17 @@ export function renderJournalWebRoot({
 }
 
 .journal-compose__title,
-.journal-entry__body,
-.journal-entry__meta {
+.journal-entry__body {
   display: block;
 }
 
 .journal-compose__title {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+  text-align: center;
 }
 
 .journal-compose {
-  padding: 14px;
+  padding: 8px;
 }
 
 .journal-submit-button {
@@ -675,20 +700,26 @@ export function renderJournalWebRoot({
 }
 
 .journal-page {
-  background: color-mix(in srgb, var(--color-surface, Canvas) 96%, white 4%);
+  background: var(--journal-page-bg);
   box-shadow: 0 12px 32px color-mix(in srgb, black 7%, transparent);
-  padding: 14px 12px;
+  padding: 8px;
 }
 
 .journal-entry {
   background: transparent;
-  padding: 8px 0;
+  margin-bottom: 0.35rem;
+  padding: 0 0 0.2rem;
+  position: relative;
+}
+
+.journal-entry:nth-child(even) {
+  background: var(--journal-entry-even-bg);
 }
 
 .journal-entry__header {
   align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 5px;
+  justify-content: flex-end;
+  margin-bottom: 2px;
 }
 
 .journal-entry__header,
@@ -697,22 +728,59 @@ export function renderJournalWebRoot({
 }
 
 .journal-page__header {
-  margin-bottom: 10px;
-  padding-bottom: 4px;
+  margin-bottom: 5px;
+  padding-bottom: 2px;
+}
+
+.journal-section__title {
+  display: block;
+  text-align: center;
 }
 
 .journal-entry__heading {
   min-width: 0;
+  text-align: right;
 }
 
 .journal-entry__menu {
-  opacity: 0;
-  transition: opacity 120ms ease;
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
-.journal-entry:hover .journal-entry__menu,
-.journal-entry:focus-within .journal-entry__menu {
+.journal-entry__menu.web-button,
+.journal-entry__menu.web-overflow-trigger {
   opacity: 1;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 400;
+  line-height: inherit;
+  transform: none;
+}
+
+.journal-entry__menu.web-button:hover,
+.journal-entry__menu.web-button:focus-visible {
+  background: transparent;
+  color: var(--color-warning);
+  box-shadow: none;
+  transform: none;
+}
+
+.journal-entry .web-overflow-panel .web-button {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1px 10px !important;
+  color: #000;
+  font-size: 0.88rem;
 }
 
 .journal-actions {
@@ -724,31 +792,70 @@ export function renderJournalWebRoot({
 }
 
 .journal-entry__body {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 0.9rem;
-  line-height: 1.55;
+  font-family: 'Lucida Console', 'IBM Plex Mono', 'Courier New', monospace;
+  font-size: 0.8rem;
+  line-height: 1.42;
 }
 
+.journal-entry__header,
 .journal-entry__meta {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   letter-spacing: 0.02em;
 }
 
 .journal-entry__meta {
+  display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  margin-top: 5px;
+  justify-content: space-between;
+  margin-top: 2px;
 }
 
-.journal-entry__published-link {
+.journal-entry__tags {
+  flex: 1;
+  min-width: 0;
+}
+
+.journal-entry__status {
+  margin-inline-start: auto;
+  text-align: right;
+}
+
+.journal-entry__status-link.web-button,
+.journal-entry__status-link.web-overflow-trigger {
+  display: inline;
+  opacity: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 400;
+  line-height: inherit;
   text-decoration: underline;
   text-underline-offset: 2px;
+  transform: none;
 }
 
-.journal-page__date,
-.journal-page__number,
-.journal-entry__time {
-  font-size: 0.82rem;
+.journal-entry__status-link.web-button:hover,
+.journal-entry__status-link.web-button:focus-visible,
+.journal-entry__status-link.web-overflow-trigger:hover,
+.journal-entry__status-link.web-overflow-trigger:focus-visible {
+  background: transparent;
+  color: var(--color-warning);
+  box-shadow: none;
+  transform: none;
+}
+
+.journal-entry__published-link,
+.web-node.journal-entry__published-link {
+  font-size: 0.72rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 `,
       },

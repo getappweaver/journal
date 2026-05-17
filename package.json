@@ -1,9 +1,9 @@
 {
-  "name": "dm-bot-journal-plugin",
-  "version": "0.2.1",
+  "name": "appweaver-journal-plugin",
+  "version": "0.3.0",
   "dmBot": {
     "coreApiVersion": "^9.12.0",
-    "description": "Captain's Log: private journaling and commit-aware notes for AppWeaver"
+    "description": "Official AppWeaver Captain's Log journal app. Adds private journaling, searchable notes, drafts, and explicit Nostr publishing to an AppWeaver workspace."
   },
   "description": "Captain's Log journaling plugin for AppWeaver",
   "type": "module",
