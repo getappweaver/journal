@@ -4,9 +4,13 @@ All notable changes for each version are listed under the corresponding `v*.*.*`
 Tags and this file are updated by the post-commit hook when you commit with `--patch`, `--minor`, or `--major` (see CONTRIBUTING.md).
 You can also run `bun run release:changelog` to rewrite this file from tags.
 
+## [v0.3.1] - 2026-05-20
+
+- chore: add plugin title metadata (010b78a)
+
 ## [v0.3.0] - 2026-05-17
 
-- feat: refine journal widget design (094d707)
+- feat: refine journal widget design (26a0df8)
 
 ## [v0.2.1] - 2026-05-16
 
