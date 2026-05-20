@@ -4,9 +4,13 @@ All notable changes for each version are listed under the corresponding `v*.*.*`
 Tags and this file are updated by the post-commit hook when you commit with `--patch`, `--minor`, or `--major` (see CONTRIBUTING.md).
 You can also run `bun run release:changelog` to rewrite this file from tags.
 
+## [v0.3.3] - 2026-05-21
+
+- fix: refine journal widget help (3f56ffc)
+
 ## [v0.3.2] - 2026-05-20
 
-- chore: add appweaver plugin metadata (83e4ab9)
+- chore: add appweaver plugin metadata (48cff3b)
 
 ## [v0.3.1] - 2026-05-20
 

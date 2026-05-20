@@ -1,6 +1,6 @@
 {
   "name": "appweaver-journal-plugin",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "appweaver": {
     "title": "Captain's Log",
     "icon": "./commands/today/renderers/captains-log.svg",

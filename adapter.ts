@@ -619,9 +619,7 @@ export function renderJournalWebRoot({
     widgetHelp: {
       title: "Captain's Log",
       body: [
-        'A private page for what happened, what mattered, and what should not be forgotten.',
-        `Today: ${entries.length} entries`,
-        `Pages: latest ${recentEntries.length} entries`,
+        'A private page for what happened, what mattered, and what should not be forgotten. Publish any of them as a short note to your Nostr followers.',
       ],
       stories: [
         {
@@ -663,7 +661,7 @@ export function renderJournalWebRoot({
 .journal-compose,
 .journal-empty,
 .journal-page {
-  background: color-mix(in srgb, var(--color-surface, Canvas) 94%, transparent);
+  background: color-mix(in srgb, var(--color-accent, Canvas) 10%, transparent);
 }
 
 .journal-compose__title,
