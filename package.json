@@ -1,8 +1,10 @@
 {
   "name": "appweaver-journal-plugin",
-  "version": "0.3.1",
-  "dmBot": {
+  "version": "0.3.2",
+  "appweaver": {
     "title": "Captain's Log",
+    "icon": "./commands/today/renderers/captains-log.svg",
+    "website": "https://github.com/getappweaver/journal",
     "coreApiVersion": "^9.12.0",
     "description": "Official AppWeaver Captain's Log journal app. Adds private journaling, searchable notes, drafts, and explicit Nostr publishing to an AppWeaver workspace."
   },
