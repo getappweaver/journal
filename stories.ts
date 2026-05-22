@@ -3,7 +3,7 @@ import type {
   StoryDefinition,
 } from '@src/system/story-definition';
 
-import { renderJournalWebRoot } from './adapter';
+import { renderJournalTodayComponent } from './commands/today/component';
 import type { JournalEntry } from './db';
 
 type JournalStoryState = {
@@ -40,7 +40,7 @@ function buildJournalTodayOutput(params: {
 }): NonNullable<StoryDefinition<JournalStoryState>['commandOutput']> {
   return {
     text: null,
-    web: renderJournalWebRoot({
+    web: renderJournalTodayComponent({
       alias: params.alias,
       entries: demoEntries,
       recentEntries: demoEntries,
@@ -57,7 +57,7 @@ function baseSandbox(params: { alias: string }) {
         buildJournalTodayOutput({ alias: params.alias }).web,
       ],
       [`${params.alias}:add`]: [
-        renderJournalWebRoot({
+        renderJournalTodayComponent({
           alias: params.alias,
           entries: [
             {

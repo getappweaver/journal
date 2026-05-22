@@ -4,9 +4,13 @@ All notable changes for each version are listed under the corresponding `v*.*.*`
 Tags and this file are updated by the post-commit hook when you commit with `--patch`, `--minor`, or `--major` (see CONTRIBUTING.md).
 You can also run `bun run release:changelog` to rewrite this file from tags.
 
+## [v0.3.4] - 2026-05-23
+
+- refactor: share journal today component (597e2f0)
+
 ## [v0.3.3] - 2026-05-21
 
-- fix: refine journal widget help (3f56ffc)
+- fix: refine journal widget help (f99f878)
 
 ## [v0.3.2] - 2026-05-20
 
