@@ -2,24 +2,30 @@
 
 Captain's Log is a private journaling plugin for AppWeaver. It provides quick capture, recent/today views, search, editing, draft review, and explicit Nostr publishing for entries you choose to share.
 
-**Command:** `!journal` (alias for the `journal` plugin)
+**Command:** `/journal` (alias for the `journal` plugin)
+
+## Demo
+
+[Interactive Demo](https://getappweaver.com/captains-log)
+
+![Captain's Log screenshot](https://getappweaver.com/screenshots/journal.png)
 
 ## Commands
 
 | Command | Description |
 |--------|-------------|
-| `!journal add <text>` | Add a private journal entry |
-| `!journal today` | Open today's diary-style journal view |
-| `!journal list` | List recent journal entries |
-| `!journal search <query>` | Search saved entries |
-| `!journal edit <id> <text>` | Replace an entry body |
-| `!journal delete <id>` | Delete an entry |
-| `!journal publish <id> <nostr://nevent...>` | Mark an entry as published |
-| `!journal drafts` | List pending AI-created drafts |
-| `!journal accept <draft_id>` | Save a pending draft as an entry |
-| `!journal decline <draft_id>` | Discard a pending draft |
-| `!journal config` | Show journal configuration |
-| `!journal help` | Show command summary |
+| `/journal add <text>` | Add a private journal entry |
+| `/journal today` | Open today's diary-style journal view |
+| `/journal list` | List recent journal entries |
+| `/journal search <query>` | Search saved entries |
+| `/journal edit <id> <text>` | Replace an entry body |
+| `/journal delete <id>` | Delete an entry |
+| `/journal publish <id> <nostr://nevent...>` | Mark an entry as published |
+| `/journal drafts` | List pending AI-created drafts |
+| `/journal accept <draft_id>` | Save a pending draft as an entry |
+| `/journal decline <draft_id>` | Discard a pending draft |
+| `/journal config` | Show journal configuration |
+| `/journal help` | Show command summary |
 
 ## Web Widget
 
@@ -29,7 +35,7 @@ Entries are private by default. Publishing is an explicit action: the web client
 
 ## Drafts
 
-AI-created entries are stored as drafts first. Use `!journal accept <draft_id>` to save a draft, or `!journal decline <draft_id>` to discard it.
+AI-created entries are stored as drafts first. Use `/journal accept <draft_id>` to save a draft, or `/journal decline <draft_id>` to discard it.
 
 ## Plugin Data
 
