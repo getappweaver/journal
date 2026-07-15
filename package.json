@@ -1,10 +1,10 @@
 {
   "name": "appweaver-journal-plugin",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "appweaver": {
     "title": "Captain's Log",
     "icon": "./commands/today/renderers/captains-log.svg",
-    "website": "https://github.com/getappweaver/journal",
+    "website": "https://getappweaver.com/apps/captains-log",
     "coreApiVersion": "^9.41.0",
     "description": "Official AppWeaver Captain's Log journal app. Adds private journaling, searchable notes, drafts, and explicit Nostr publishing to an AppWeaver workspace."
   },

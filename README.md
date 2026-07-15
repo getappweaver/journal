@@ -6,7 +6,7 @@ Captain's Log is a private journaling plugin for AppWeaver. It provides quick ca
 
 ## Demo
 
-[Interactive Demo](https://getappweaver.com/captains-log)
+[Interactive Demo](https://getappweaver.com/apps/captains-log)
 
 ![Captain's Log screenshot](https://getappweaver.com/screenshots/journal.png)
 

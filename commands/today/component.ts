@@ -229,11 +229,7 @@ function publishJournalEntryAction(
         ...(title ? [['subject', title]] : []),
       ],
       signTitle: 'Sign Event: Publish journal entry',
-      fallbackRelays: [
-        'wss://relay.damus.io',
-        'wss://nos.lol',
-        'wss://relay.nostr.band',
-      ],
+      fallbackRelays: ['wss://nos.lol', 'wss://relay.nostr.band'],
       statusTitle: 'Journal entry published',
       statusMessage: `Journal entry #${entry.id}`,
       onSuccessCommand: {

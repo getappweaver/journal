@@ -4,9 +4,13 @@ All notable changes for each version are listed under the corresponding `v*.*.*`
 Tags and this file are updated by the post-commit hook when you commit with `--patch`, `--minor`, or `--major` (see CONTRIBUTING.md).
 You can also run `bun run release:changelog` to rewrite this file from tags.
 
+## [v0.4.1] - 2026-07-15
+
+- fix: update journal metadata and relay fallbacks (a6450dc)
+
 ## [v0.4.0] - 2026-06-14
 
-- chore: require story-capable core (07627cb)
+- chore: require story-capable core (e90698d)
 
 ## [v0.3.5] - 2026-05-23
 
