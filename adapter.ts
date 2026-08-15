@@ -28,6 +28,7 @@ import {
 type HandleJournalProps = {
   args: string[];
   source: MessageSource;
+  jsonPayload: unknown;
   prefix: string;
   alias: string;
   db: Database;
@@ -73,6 +74,26 @@ function parseEntryInput(textRaw: string): CreateJournalEntryInput {
   };
 }
 
+function getWebArgument(jsonPayload: unknown, name: string): string | null {
+  if (typeof jsonPayload !== 'object' || jsonPayload === null) {
+    return null;
+  }
+
+  const payload = jsonPayload as { arguments?: unknown };
+
+  if (
+    typeof payload.arguments !== 'object' ||
+    payload.arguments === null ||
+    Array.isArray(payload.arguments)
+  ) {
+    return null;
+  }
+
+  const value = (payload.arguments as Record<string, unknown>)[name];
+
+  return typeof value === 'string' ? value : null;
+}
+
 function parseDraftId({
   args,
   prefix,
@@ -91,6 +112,7 @@ function parseDraftId({
 export async function handleJournal({
   args,
   source,
+  jsonPayload,
   prefix,
   alias,
   db,
@@ -99,7 +121,8 @@ export async function handleJournal({
   void identity;
 
   const subcommand = (args[0] ?? 'help').toLowerCase();
-  const rest = args.slice(1).join(' ').trim();
+  const webText = source === 'web' ? getWebArgument(jsonPayload, 'text') : null;
+  const rest = (webText ?? args.slice(1).join(' ')).trim();
   const cmd = `${prefix}${alias}`;
 
   if (subcommand === 'help') {
@@ -159,7 +182,7 @@ export async function handleJournal({
 
   if (subcommand === 'edit') {
     const id = Number(args[1]);
-    const textRaw = args.slice(2).join(' ').trim();
+    const textRaw = (webText ?? args.slice(2).join(' ')).trim();
 
     if (!Number.isInteger(id) || id <= 0 || !textRaw) {
       return `Usage: ${cmd} edit <id> <note>`;
@@ -223,19 +246,49 @@ export async function handleJournal({
 
   if (subcommand === 'publish') {
     const id = Number(args[1]);
-    const nostrUrl = String(args[2] ?? '').trim();
+
+    const nostrUrl = String(
+      (source === 'web'
+        ? (getWebArgument(jsonPayload, 'nostrUrl') ??
+          getWebArgument(jsonPayload, 'url'))
+        : null) ??
+        args[2] ??
+        '',
+    ).trim();
+
+    console.info('[journal.publish] Received publish confirmation', {
+      entryId: Number.isInteger(id) ? id : null,
+      source,
+      hasNostrUrl: nostrUrl.length > 0,
+    });
 
     if (!Number.isInteger(id) || id <= 0 || !nostrUrl) {
+      console.warn('[journal.publish] Invalid publish confirmation', {
+        entryId: Number.isInteger(id) ? id : null,
+        source,
+        hasNostrUrl: nostrUrl.length > 0,
+      });
+
       return `Usage: ${cmd} publish <id> <nostr://nevent...>`;
     }
 
     if (!nostrUrl.startsWith('nostr://nevent')) {
+      console.warn('[journal.publish] Rejected invalid Nostr event URL', {
+        entryId: id,
+        source,
+        urlPrefix: nostrUrl.slice(0, 16),
+      });
+
       return 'Publish URL must start with nostr://nevent';
     }
 
     const existing = getJournalEntry(db, id);
 
     if (!existing) {
+      console.warn('[journal.publish] Journal entry not found', {
+        entryId: id,
+      });
+
       return `Journal entry not found: ${id}`;
     }
 
@@ -249,6 +302,11 @@ export async function handleJournal({
         status: 'published',
         metadata: { ...existing.metadata, nostrUrl },
       },
+    });
+
+    console.info('[journal.publish] Stored publish confirmation', {
+      entryId: id,
+      updated: entry !== null,
     });
 
     return entry

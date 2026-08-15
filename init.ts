@@ -51,6 +51,7 @@ export const JournalPlugin: BotPlugin = {
     return handleJournal({
       args,
       source: context.source,
+      jsonPayload: context.jsonPayload,
       prefix: context.prefix,
       alias,
       db: JournalPluginDb,

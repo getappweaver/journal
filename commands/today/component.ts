@@ -624,6 +624,10 @@ export function renderJournalTodayComponent({
   padding: 8px;
 }
 
+.journal-compose .web-textArea__input {
+  resize: vertical;
+}
+
 .journal-submit-button {
   display: inline-flex;
   align-items: center;

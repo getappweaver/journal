@@ -190,20 +190,5 @@ export const commandDefinition = (
       summary: 'Show journal configuration.',
       examples: [`${prefix}${alias} config`],
     }),
-    subcommand({
-      name: 'drafts',
-      summary: 'List pending AI-created journal drafts.',
-      examples: [`${prefix}${alias} drafts`],
-    }),
-    subcommand({
-      name: 'accept',
-      summary: 'Accept a journal draft.',
-      examples: [`${prefix}${alias} accept 1`],
-    }),
-    subcommand({
-      name: 'decline',
-      summary: 'Decline a journal draft.',
-      examples: [`${prefix}${alias} decline 1`],
-    }),
   ],
 });
