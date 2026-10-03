@@ -1,3 +1,4 @@
+import { NIP65_DISCOVERY_RELAYS } from '@src/nostr/relays';
 import type {
   WebAction,
   WebNode,
@@ -229,7 +230,7 @@ function publishJournalEntryAction(
         ...(title ? [['subject', title]] : []),
       ],
       signTitle: 'Sign Event: Publish journal entry',
-      fallbackRelays: ['wss://nos.lol', 'wss://relay.nostr.band'],
+      fallbackRelays: [...NIP65_DISCOVERY_RELAYS],
       statusTitle: 'Journal entry published',
       statusMessage: `Journal entry #${entry.id}`,
       onSuccessCommand: {
@@ -240,6 +241,22 @@ function publishJournalEntryAction(
       },
     },
     refresh: journalRefresh(alias),
+  };
+}
+
+function inspectJournalEntryAction(
+  alias: string,
+  entry: JournalEntry,
+): WebAction {
+  return {
+    type: 'command',
+    command: alias,
+    subcommand: 'inspect',
+    arguments: { id: entry.id },
+    options: {},
+    surface: 'modal',
+    modalTitle: `Inspect journal entry #${entry.id}`,
+    recordInTimeline: false,
   };
 }
 
@@ -353,15 +370,31 @@ function renderEntryMeta(
         }),
         {
           type: 'element',
-          tag: 'link',
+          tag: 'overflowMenu',
           props: {
-            href: nostrUrl,
-            external: true,
-            tone: 'muted',
-            size: 'sm',
-            className: 'journal-entry__status journal-entry__published-link',
+            label: 'published ℹ',
+            className:
+              'journal-entry__status journal-entry__status-link journal-entry__published-link',
           },
-          children: [{ type: 'text', value: 'published' }],
+          children: [
+            {
+              type: 'element',
+              tag: 'menuItem',
+              props: {
+                label: 'Open event',
+                href: nostrUrl,
+                external: true,
+              },
+            },
+            {
+              type: 'element',
+              tag: 'menuItem',
+              props: {
+                label: 'Inspect event',
+                action: inspectJournalEntryAction(alias, entry),
+              },
+            },
+          ],
         },
       ],
     });
@@ -804,6 +837,11 @@ export function renderJournalTodayComponent({
   font-size: 0.72rem;
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+.journal-entry__published-link.web-overflow-trigger:hover,
+.journal-entry__published-link.web-overflow-trigger:focus-visible {
+  color: var(--color-accent);
 }
 `,
       },

@@ -1,9 +1,10 @@
 import type { Database } from 'bun:sqlite';
 
-import type { PluginIdentity } from '@src/core/plugin';
+import type { PluginContext, PluginIdentity } from '@src/core/plugin';
 import type { MessageSource } from '@src/messaging';
 import type { WebHandlerResult } from '@src/web/ui-schema';
 
+import { inspectJournalPublishedEntry } from './commands/inspect/handler';
 import { renderJournalTodayWeb } from './commands/today/renderers/web';
 import {
   createJournalEntry,
@@ -33,6 +34,7 @@ type HandleJournalProps = {
   alias: string;
   db: Database;
   identity: PluginIdentity;
+  context: PluginContext;
 };
 
 type ParseDraftIdProps = {
@@ -53,6 +55,8 @@ function help(prefix: string, alias: string): string {
     `${prefix}${alias} edit <id> <note> Edit an entry`,
     `${prefix}${alias} delete <id>      Delete an entry`,
     `${prefix}${alias} publish <id> <nostr://nevent...> Mark an entry published`,
+    `${prefix}${alias} inspect <id>     Inspect a published entry`,
+    `${prefix}${alias} inspect-publish <id> --relay <url|all> Resend the original event`,
     `${prefix}${alias} config           Show config`,
     `${prefix}${alias} drafts           Show AI-created drafts`,
     `${prefix}${alias} accept <id>      Accept a draft`,
@@ -117,6 +121,7 @@ export async function handleJournal({
   alias,
   db,
   identity,
+  context,
 }: HandleJournalProps): Promise<WebHandlerResult> {
   void identity;
 
@@ -312,6 +317,39 @@ export async function handleJournal({
     return entry
       ? `Marked journal entry #${id} as published: ${nostrUrl}`
       : `Journal entry not found: ${id}`;
+  }
+
+  if (subcommand === 'inspect' || subcommand === 'inspect-publish') {
+    const id = Number(args[1]);
+
+    const entry =
+      Number.isInteger(id) && id > 0 ? getJournalEntry(db, id) : null;
+
+    if (!entry) {
+      return 'Published journal entry not found.';
+    }
+
+    const payload = jsonPayload as { options?: { relay?: unknown } } | null;
+
+    const relayIndex = args.indexOf('--relay');
+
+    const relay =
+      source === 'web' && typeof payload?.options?.relay === 'string'
+        ? payload.options.relay
+        : relayIndex >= 0 && args[relayIndex + 1]
+          ? args[relayIndex + 1]!
+          : null;
+
+    if (subcommand === 'inspect-publish' && relay === null) {
+      return `Usage: ${cmd} inspect-publish <id> --relay <write-relay|all>`;
+    }
+
+    return inspectJournalPublishedEntry({
+      alias,
+      entry,
+      masterPubkey: context.masterPubkey,
+      publishRelay: subcommand === 'inspect-publish' ? relay : null,
+    });
   }
 
   if (subcommand === 'config') {

@@ -35,7 +35,7 @@ export const commandDefinition = (
   subcommands: [
     createHelpSubcommandDefinition(prefix, alias, {
       topicArgSummary:
-        'Optional subcommand: add, list, today, search, edit, delete, publish, config, drafts, accept, decline',
+        'Optional subcommand: add, list, today, search, edit, delete, publish, inspect, inspect-publish, config, drafts, accept, decline',
       exampleTopics: ['add', 'today', 'search'],
     }),
     {
@@ -190,5 +190,41 @@ export const commandDefinition = (
       summary: 'Show journal configuration.',
       examples: [`${prefix}${alias} config`],
     }),
+    ...['inspect', 'inspect-publish'].map((name): SubcommandDefinition => ({
+      name,
+      summary:
+        name === 'inspect'
+          ? "Inspect a published entry on its author's write relays."
+          : 'Resend the original published event to missing write relays.',
+      aliases: [],
+      arguments: [
+        {
+          name: 'id',
+          summary: 'Journal entry id.',
+          kind: 'integer',
+          required: true,
+          variadic: false,
+          choices: null,
+        },
+      ],
+      options:
+        name === 'inspect-publish'
+          ? [
+              {
+                name: 'relay',
+                flag: '--relay',
+                summary: 'Write relay URL, or all missing write relays.',
+                kind: 'string',
+                shortFlag: null,
+                required: true,
+                choices: null,
+              },
+            ]
+          : [],
+      examples: [
+        `${prefix}${alias} ${name} 1${name === 'inspect-publish' ? ' --relay all' : ''}`,
+      ],
+      webExecutionMode: 'runnable_default',
+    })),
   ],
 });

@@ -21,6 +21,8 @@ Captain's Log is a private journaling plugin for AppWeaver. It provides quick ca
 | `/journal edit <id> <text>` | Replace an entry body |
 | `/journal delete <id>` | Delete an entry |
 | `/journal publish <id> <nostr://nevent...>` | Mark an entry as published |
+| `/journal inspect <id>` | Check the published event on its author's write relays |
+| `/journal inspect-publish <id> --relay <url\|all>` | Resend the original signed event to missing write relays |
 | `/journal drafts` | List pending AI-created drafts |
 | `/journal accept <draft_id>` | Save a pending draft as an entry |
 | `/journal decline <draft_id>` | Discard a pending draft |
@@ -32,6 +34,16 @@ Captain's Log is a private journaling plugin for AppWeaver. It provides quick ca
 The `today` command registers the Captain's Log widget. It includes a quick-capture form, diary-style pages, per-entry actions, and a guided story for capture and publishing.
 
 Entries are private by default. Publishing is an explicit action: the web client signs and publishes a Nostr kind:1 note, then the plugin stores the resulting `nostr://nevent...` link.
+
+Published entries expose Open event and Inspect event. Journal renders inspection
+through ordinary app commands in the shared modal: check write relays, refresh,
+and resend the original signed event to individual or all missing write relays.
+It does not create a replacement event if the original cannot be retrieved.
+Inspection also shows relay hints embedded in the saved link, even when they are
+outside the author's current write-relay list. Fresh retrieval, existing relay
+history, and link hints are labeled separately; failed discovery does not hide
+the known relay rows.
+See [published-event inspection](docs/PUBLISHED_EVENT_INSPECTION.md).
 
 ## Drafts
 

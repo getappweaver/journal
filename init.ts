@@ -56,6 +56,7 @@ export const JournalPlugin: BotPlugin = {
       alias,
       db: JournalPluginDb,
       identity: JournalPlugin.identity,
+      context: JournalPluginContext,
     });
   },
   onInit: (ctx: PluginContext) => {
