@@ -2,7 +2,7 @@ import { join } from 'path';
 
 import { Database, type Database as DatabaseType } from 'bun:sqlite';
 
-export type JournalEntryStatus = 'private' | 'published';
+export type JournalEntryStatus = 'private' | 'scheduled' | 'published';
 
 export type JournalEntry = {
   id: number;

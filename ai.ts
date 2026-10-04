@@ -1,8 +1,17 @@
+import { nip19, type NostrEvent, type VerifiedEvent } from 'nostr-tools';
+import type { SimplePool } from 'nostr-tools/pool';
 import { z } from 'zod';
 
+import { fetchNip65WriteRelays, uniqueRelays } from '@src/nostr/nip65';
+import {
+  publishSignedEventToRelays,
+  summarizeRelayOutcomes,
+} from '@src/nostr/relay-publish';
+import { NIP65_DISCOVERY_RELAYS } from '@src/nostr/relays';
 import type { AiDefinition } from '@src/system/ai-definition';
 
 import {
+  getJournalEntry,
   listJournalEntries,
   listTodayJournalEntries,
   openDb,
@@ -10,10 +19,12 @@ import {
   storeJournalDraft,
   type CreateJournalEntryInput,
   type JournalEntryStatus,
+  updateJournalEntry,
 } from './db';
 import { formatJournalDraft, formatJournalEntries } from './format';
+import { JournalPluginContext } from './init';
 
-const JournalStatusSchema = z.enum(['private', 'published']);
+const JournalStatusSchema = z.enum(['private', 'scheduled', 'published']);
 
 const JournalAddCallSchema = z.object({
   type: z.literal('add'),
@@ -42,11 +53,19 @@ const JournalSearchCallSchema = z.object({
   limit: z.number().int().positive().max(50).default(10),
 });
 
+const JournalPublishScheduledCallSchema = z.object({
+  type: z.literal('publish_scheduled'),
+  id: z.number().int().positive(),
+  jobResourceId: z.string().optional(),
+  aborted: z.boolean().optional(),
+});
+
 export const JournalToolCallSchema = z.discriminatedUnion('type', [
   JournalAddCallSchema,
   JournalListCallSchema,
   JournalTodayCallSchema,
   JournalSearchCallSchema,
+  JournalPublishScheduledCallSchema,
 ]);
 
 export type JournalToolCall = z.infer<typeof JournalToolCallSchema>;
@@ -68,6 +87,8 @@ export async function executeTool(params: {
   prefix: string;
   call: JournalToolCall;
   db: ReturnType<typeof openDb>;
+  pool?: SimplePool;
+  masterPubkey?: string;
 }): Promise<string> {
   const cmd = `${params.prefix}${params.alias}`;
 
@@ -90,6 +111,118 @@ export async function executeTool(params: {
       searchJournalEntries(params.db, params.call.query, params.call.limit),
       `No journal entries matched: ${params.call.query}`,
     );
+  }
+
+  if (params.call.type === 'publish_scheduled') {
+    const id = params.call.id;
+
+    if (params.call.aborted) {
+      return `Scheduled publication for entry #${id} was cancelled.`;
+    }
+
+    const entry = getJournalEntry(params.db, id);
+
+    if (!entry) {
+      return `Scheduled entry #${id} was not found (it may have been deleted). Publication aborted.`;
+    }
+
+    if (entry.status === 'published') {
+      return `Journal entry #${id} is already published.`;
+    }
+
+    if (entry.status !== 'scheduled') {
+      return `Journal entry #${id} is not scheduled (status: ${entry.status}). Publication aborted.`;
+    }
+
+    if (
+      params.call.jobResourceId &&
+      entry.metadata.jobResourceId &&
+      entry.metadata.jobResourceId !== params.call.jobResourceId
+    ) {
+      return `Scheduled publication for entry #${id} was superseded by another schedule. Publication aborted.`;
+    }
+
+    const signedEvent = entry.metadata.signedEvent as NostrEvent | undefined;
+
+    if (
+      !signedEvent ||
+      typeof signedEvent !== 'object' ||
+      !signedEvent.id ||
+      !signedEvent.sig
+    ) {
+      return `Scheduled journal entry #${id} does not contain a valid signed event. Publication failed.`;
+    }
+
+    const pool = params.pool ?? JournalPluginContext?.pool;
+
+    if (!pool) {
+      return `Nostr connection pool is not available. Failed to publish entry #${id}.`;
+    }
+
+    const writeRelays = await fetchNip65WriteRelays({
+      pool,
+      authorPubkey: signedEvent.pubkey,
+    });
+
+    const targetRelays = uniqueRelays([
+      ...writeRelays,
+      ...NIP65_DISCOVERY_RELAYS,
+    ]);
+
+    const outcomes = await publishSignedEventToRelays(
+      targetRelays,
+      signedEvent as VerifiedEvent,
+    );
+
+    const { accepted, rejected } = summarizeRelayOutcomes(outcomes);
+
+    if (accepted.length === 0) {
+      const errMsgs = rejected.map((r) => `${r.relay}: ${r.error}`).join('; ');
+
+      updateJournalEntry({
+        db: params.db,
+        id,
+        input: {
+          title: entry.title,
+          body: entry.body,
+          tags: entry.tags,
+          status: 'scheduled',
+          metadata: {
+            ...entry.metadata,
+            lastPublishError: errMsgs,
+            lastPublishAttempt: Date.now(),
+          },
+        },
+      });
+
+      return `Failed to publish scheduled entry #${id} to any relays: ${errMsgs}`;
+    }
+
+    const acceptedRelays = accepted.map((r) => r.relay);
+
+    const nostrUrl = `nostr://${nip19.neventEncode({
+      id: signedEvent.id,
+      relays: acceptedRelays.slice(0, 4),
+    })}`;
+
+    updateJournalEntry({
+      db: params.db,
+      id,
+      input: {
+        title: entry.title,
+        body: entry.body,
+        tags: entry.tags,
+        status: 'published',
+        metadata: {
+          ...entry.metadata,
+          nostrUrl,
+          publishedRelays: acceptedRelays,
+          publishedAt: Date.now(),
+        },
+      },
+    });
+
+    return `Successfully published scheduled journal entry #${id} to Nostr: ${nostrUrl}`;
   }
 
   const draft = storeJournalDraft(

@@ -244,6 +244,36 @@ function publishJournalEntryAction(
   };
 }
 
+function scheduleJournalEntryAction(
+  alias: string,
+  entry: JournalEntry,
+): WebAction {
+  return {
+    type: 'command',
+    command: alias,
+    subcommand: 'schedule-form',
+    arguments: { id: entry.id },
+    options: {},
+    surface: 'modal',
+    modalTitle: `Schedule journal entry #${entry.id}`,
+    recordInTimeline: false,
+  };
+}
+
+function cancelScheduleJournalEntryAction(
+  alias: string,
+  entry: JournalEntry,
+): WebAction {
+  return {
+    type: 'command',
+    command: alias,
+    subcommand: 'schedule-cancel',
+    arguments: { id: entry.id },
+    options: {},
+    refresh: journalRefresh(alias),
+  };
+}
+
 function inspectJournalEntryAction(
   alias: string,
   entry: JournalEntry,
@@ -400,6 +430,67 @@ function renderEntryMeta(
     });
   }
 
+  if (entry.status === 'scheduled') {
+    const scheduledTime =
+      typeof entry.metadata.scheduledAt === 'number'
+        ? formatEntryTime(entry.metadata.scheduledAt)
+        : '';
+
+    const scheduledLabel = scheduledTime
+      ? `scheduled (${scheduledTime}) ℹ`
+      : 'scheduled ℹ';
+
+    return row({
+      className: 'journal-entry__meta',
+      gap: 'sm',
+      children: [
+        textElement({
+          value: tags.trim(),
+          className: 'journal-entry__tags',
+          tone: 'muted',
+          size: 'sm',
+          weight: null,
+        }),
+        {
+          type: 'element',
+          tag: 'overflowMenu',
+          props: {
+            label: scheduledLabel,
+            className:
+              'journal-entry__status journal-entry__status-link journal-entry__scheduled-link',
+          },
+          children: [
+            {
+              type: 'element',
+              tag: 'menuItem',
+              props: {
+                label: 'Reschedule',
+                action: scheduleJournalEntryAction(alias, entry),
+              },
+            },
+            {
+              type: 'element',
+              tag: 'menuItem',
+              props: {
+                label: 'Publish now',
+                action: publishJournalEntryAction(alias, entry),
+              },
+            },
+            {
+              type: 'element',
+              tag: 'menuItem',
+              props: {
+                label: 'Cancel schedule',
+                tone: 'danger',
+                action: cancelScheduleJournalEntryAction(alias, entry),
+              },
+            },
+          ],
+        },
+      ],
+    });
+  }
+
   return row({
     className: 'journal-entry__meta',
     gap: 'sm',
@@ -411,24 +502,38 @@ function renderEntryMeta(
         size: 'sm',
         weight: null,
       }),
-      {
-        type: 'element',
-        tag: 'overflowMenu',
-        props: {
-          label: 'private',
-          className: 'journal-entry__status journal-entry__status-link',
-        },
+      row({
+        className: 'journal-entry__actions',
+        gap: 'xs',
         children: [
           {
             type: 'element',
-            tag: 'menuItem',
+            tag: 'overflowMenu',
             props: {
-              label: 'Publish',
-              action: publishJournalEntryAction(alias, entry),
+              label: 'private',
+              className: 'journal-entry__status journal-entry__status-link',
             },
+            children: [
+              {
+                type: 'element',
+                tag: 'menuItem',
+                props: {
+                  label: 'Publish',
+                  action: publishJournalEntryAction(alias, entry),
+                },
+              },
+              {
+                type: 'element',
+                tag: 'menuItem',
+                props: {
+                  label: 'Schedule',
+                  action: scheduleJournalEntryAction(alias, entry),
+                },
+              },
+            ],
           },
         ],
-      },
+      }),
     ],
   });
 }
@@ -843,8 +948,350 @@ export function renderJournalTodayComponent({
 .journal-entry__published-link.web-overflow-trigger:focus-visible {
   color: var(--color-accent);
 }
+
+.journal-entry__scheduled-link,
+.web-node.journal-entry__scheduled-link {
+  font-size: 0.72rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: var(--color-warning);
+}
+
+.journal-entry__scheduled-link.web-overflow-trigger:hover,
+.journal-entry__scheduled-link.web-overflow-trigger:focus-visible {
+  color: var(--color-warning);
+}
+
+.journal-hidden-tz {
+  display: none !important;
+}
+
+.journal-schedule-preview {
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 2px solid var(--color-warning);
+}
+
+.journal-schedule-banner {
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.journal-schedule-banner--error {
+  border-left: 2px solid var(--color-danger);
+}
+
+.journal-schedule-banner--info {
+  border-left: 2px solid var(--color-warning);
+}
+
+.journal-schedule-field-row {
+  align-items: center;
+}
 `,
       },
     ],
+  };
+}
+
+export type RenderScheduleModalProps = {
+  alias: string;
+  entry: JournalEntry;
+  notification: string | null;
+  error: string | null;
+  defaultDate: string | null;
+  defaultTime: string | null;
+  isRescheduling: boolean;
+};
+
+type SchedulingDefaults = {
+  defaultDate: string;
+  defaultTime: string;
+  timeZone: string;
+  offsetString: string;
+};
+
+export function getSchedulingDefaults(
+  scheduledAt: number | null,
+): SchedulingDefaults {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+  const target = scheduledAt
+    ? new Date(scheduledAt)
+    : new Date(Date.now() + 60 * 60 * 1000);
+
+  const year = target.toLocaleDateString('en-CA', {
+    year: 'numeric',
+    timeZone,
+  });
+
+  const month = target.toLocaleDateString('en-CA', {
+    month: '2-digit',
+    timeZone,
+  });
+
+  const day = target.toLocaleDateString('en-CA', {
+    day: '2-digit',
+    timeZone,
+  });
+
+  const defaultDate = `${year}-${month}-${day}`;
+
+  const hour = target.toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    hour12: false,
+    timeZone,
+  });
+
+  const minute = target.toLocaleTimeString('en-GB', {
+    minute: '2-digit',
+    hour12: false,
+    timeZone,
+  });
+
+  const defaultTime = `${hour}:${minute}`;
+
+  const offsetString =
+    new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      timeZoneName: 'shortOffset',
+    })
+      .formatToParts(target)
+      .find((part) => part.type === 'timeZoneName')?.value ?? '';
+
+  return { defaultDate, defaultTime, timeZone, offsetString };
+}
+
+export function renderScheduleModal({
+  alias,
+  entry,
+  notification,
+  error,
+  defaultDate,
+  defaultTime,
+  isRescheduling,
+}: RenderScheduleModalProps): WebNodeRoot {
+  const defaults = getSchedulingDefaults(
+    typeof entry.metadata.scheduledAt === 'number'
+      ? entry.metadata.scheduledAt
+      : null,
+  );
+
+  const effectiveDate = defaultDate ?? defaults.defaultDate;
+  const effectiveTime = defaultTime ?? defaults.defaultTime;
+  const title = entry.title?.trim() ?? '';
+
+  const children: WebNode[] = [];
+
+  if (notification) {
+    children.push(
+      box({
+        className: 'journal-schedule-banner journal-schedule-banner--info',
+        padding: 'sm',
+        children: [
+          textElement({
+            value: notification,
+            className: null,
+            tone: 'warning',
+            size: 'sm',
+            weight: 'medium',
+          }),
+        ],
+      }),
+    );
+  }
+
+  if (error) {
+    children.push(
+      box({
+        className: 'journal-schedule-banner journal-schedule-banner--error',
+        padding: 'sm',
+        children: [
+          textElement({
+            value: error,
+            className: null,
+            tone: 'danger',
+            size: 'sm',
+            weight: 'bold',
+          }),
+        ],
+      }),
+    );
+  }
+
+  children.push(
+    box({
+      className: 'journal-schedule-preview',
+      padding: 'sm',
+      children: [
+        stack({
+          gap: 'xs',
+          className: null,
+          children: [
+            ...(entry.title
+              ? [
+                  textElement({
+                    value: entry.title,
+                    className: null,
+                    tone: null,
+                    size: 'sm',
+                    weight: 'bold',
+                  }),
+                ]
+              : []),
+            textElement({
+              value:
+                entry.body.length > 200
+                  ? `${entry.body.slice(0, 200)}…`
+                  : entry.body,
+              className: null,
+              tone: 'muted',
+              size: 'sm',
+              weight: null,
+            }),
+          ],
+        }),
+      ],
+    }),
+  );
+
+  children.push({
+    type: 'element',
+    tag: 'form',
+    props: {
+      action: {
+        type: 'clientAction',
+        action: 'nostr.signEvent',
+        payload: {
+          id: entry.id,
+          kind: 1,
+          content: entry.body,
+          tags: [
+            ...entry.tags.map((tag) => ['t', tag]),
+            ...(title ? [['subject', title]] : []),
+          ],
+          signTitle: `Sign Event: Schedule entry #${entry.id}`,
+          statusTitle: isRescheduling
+            ? 'Journal entry rescheduled'
+            : 'Journal entry scheduled',
+          statusMessage: `Entry #${entry.id}`,
+          onSuccessCommand: {
+            command: alias,
+            subcommand: 'schedule-confirm',
+            arguments: { id: entry.id },
+            options: {},
+          },
+        },
+        refresh: journalRefresh(alias),
+      },
+    },
+    children: [
+      stack({
+        gap: 'sm',
+        className: null,
+        children: [
+          row({
+            gap: 'sm',
+            className: 'journal-schedule-field-row',
+            children: [
+              textElement({
+                value: 'Date:',
+                className: null,
+                tone: null,
+                size: 'sm',
+                weight: 'semibold',
+              }),
+              {
+                type: 'element',
+                tag: 'textField',
+                props: {
+                  formFieldName: 'date',
+                  inputType: 'date',
+                  value: effectiveDate,
+                },
+              },
+            ],
+          }),
+          row({
+            gap: 'sm',
+            className: 'journal-schedule-field-row',
+            children: [
+              textElement({
+                value: 'Time:',
+                className: null,
+                tone: null,
+                size: 'sm',
+                weight: 'semibold',
+              }),
+              {
+                type: 'element',
+                tag: 'textField',
+                props: {
+                  formFieldName: 'time',
+                  inputType: 'time',
+                  value: effectiveTime,
+                },
+              },
+            ],
+          }),
+          textElement({
+            value: `Timezone: ${defaults.timeZone}${defaults.offsetString ? ` (${defaults.offsetString})` : ''}`,
+            className: null,
+            tone: 'muted',
+            size: 'sm',
+            weight: null,
+          }),
+          {
+            type: 'element',
+            tag: 'textField',
+            props: {
+              formFieldName: 'tz',
+              inputType: 'text',
+              value: defaults.timeZone,
+              className: 'journal-hidden-tz',
+            },
+          },
+          row({
+            gap: 'sm',
+            className: 'web-form__actions journal-actions',
+            children: [
+              {
+                type: 'element',
+                tag: 'button',
+                props: {
+                  label: isRescheduling ? 'Reschedule' : 'Accept',
+                  tone: 'default',
+                  className: 'journal-submit-button',
+                  htmlType: 'submit',
+                },
+              },
+              {
+                type: 'element',
+                tag: 'button',
+                props: {
+                  label: 'Cancel',
+                  action: {
+                    type: 'clientAction',
+                    action: 'web.closeModal',
+                    payload: {},
+                  },
+                },
+              },
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+
+  return {
+    kind: 'ui',
+    version: 1,
+    meta: { command: alias, subcommand: 'schedule-form' },
+    tree: {
+      type: 'element',
+      tag: 'stack',
+      props: { gap: 'md' },
+      children,
+    },
   };
 }

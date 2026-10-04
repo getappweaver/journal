@@ -35,7 +35,7 @@ export const commandDefinition = (
   subcommands: [
     createHelpSubcommandDefinition(prefix, alias, {
       topicArgSummary:
-        'Optional subcommand: add, list, today, search, edit, delete, publish, inspect, inspect-publish, config, drafts, accept, decline',
+        'Optional subcommand: add, list, today, search, edit, delete, schedule-form, schedule-cancel, publish, inspect, inspect-publish, config, drafts, accept, decline',
       exampleTopics: ['add', 'today', 'search'],
     }),
     {
@@ -157,6 +157,60 @@ export const commandDefinition = (
       ],
       options: [],
       examples: [`${prefix}${alias} delete 1`],
+      webExecutionMode: 'runnable_default',
+    },
+    {
+      name: 'schedule-form',
+      summary: 'Open the scheduling modal for a journal entry.',
+      aliases: [],
+      arguments: [
+        {
+          name: 'id',
+          summary: 'Journal entry id.',
+          kind: 'integer',
+          required: true,
+          variadic: false,
+          choices: null,
+        },
+      ],
+      options: [],
+      examples: [`${prefix}${alias} schedule-form 1`],
+      webExecutionMode: 'runnable_default',
+    },
+    {
+      name: 'schedule-confirm',
+      summary: 'Confirm scheduling for a journal entry.',
+      aliases: [],
+      arguments: [
+        {
+          name: 'id',
+          summary: 'Journal entry id.',
+          kind: 'integer',
+          required: true,
+          variadic: false,
+          choices: null,
+        },
+      ],
+      options: [],
+      examples: [`${prefix}${alias} schedule-confirm 1`],
+      webExecutionMode: 'requires_input',
+    },
+    {
+      name: 'schedule-cancel',
+      summary: 'Cancel scheduled publishing for a journal entry.',
+      aliases: [],
+      arguments: [
+        {
+          name: 'id',
+          summary: 'Journal entry id.',
+          kind: 'integer',
+          required: true,
+          variadic: false,
+          choices: null,
+        },
+      ],
+      options: [],
+      examples: [`${prefix}${alias} schedule-cancel 1`],
       webExecutionMode: 'runnable_default',
     },
     {
