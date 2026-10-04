@@ -4,9 +4,13 @@ All notable changes for each version are listed under the corresponding `v*.*.*`
 Tags and this file are updated by the post-commit hook when you commit with `--patch`, `--minor`, or `--major` (see CONTRIBUTING.md).
 You can also run `bun run release:changelog` to rewrite this file from tags.
 
+## [v0.7.1] - 2026-10-04
+
+- fix: scheduler v4 upstream fix (02d0dfe)
+
 ## [v0.7.0] - 2026-10-04
 
-- feat: supporting scheduler v4 with delete job feature (3c69a5d)
+- feat: supporting scheduler v4 with delete job feature (47e5ef6)
 
 ## [v0.6.0] - 2026-10-04
 
