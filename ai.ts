@@ -22,7 +22,6 @@ import {
   updateJournalEntry,
 } from './db';
 import { formatJournalDraft, formatJournalEntries } from './format';
-import { JournalPluginContext } from './init';
 
 const JournalStatusSchema = z.enum(['private', 'scheduled', 'published']);
 
@@ -153,7 +152,8 @@ export async function executeTool(params: {
       return `Scheduled journal entry #${id} does not contain a valid signed event. Publication failed.`;
     }
 
-    const pool = params.pool ?? JournalPluginContext?.pool;
+    const pool =
+      params.pool ?? (await import('./init')).JournalPluginContext?.pool;
 
     if (!pool) {
       return `Nostr connection pool is not available. Failed to publish entry #${id}.`;
